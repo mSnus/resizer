@@ -101,8 +101,8 @@ export default {
 .center-point {
   background-color: #ff0000;
   opacity: 0.5;
-  width: 12px;
-  height: 12px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   position: absolute;
   top: calc(50% - 6px);

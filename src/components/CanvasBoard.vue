@@ -43,8 +43,8 @@
         :height="clip.height"
         :color="clip.color"
         :radius="clip.radius"
-        :left="clip.left"
-        :top="clip.top"
+        :left="clip.left + 'px'"
+        :top="clip.top + 'px'"
         :center="clip.center"
         :dragPoint="clip.dragPoint"
         :zIndex="100 + index"
@@ -117,8 +117,8 @@ export default {
           height: '200px',
           color: '#262366',
           radius: '0',
-          left: '20%',
-          top: '10%'
+          left: 48,
+          top: 10
         },
         {
           id: 'clip2',
@@ -126,8 +126,8 @@ export default {
           height: '200px',
           color: '#ffcc00',
           radius: '0',
-          left: '60%',
-          top: '80%'
+          left: 480,
+          top: 360
         },
         {
           id: 'clip3',
@@ -135,8 +135,8 @@ export default {
           height: '120px',
           radius: '50%',
           color: 'lime',
-          left: '10%',
-          top: '65%'
+          left: 82,
+          top: 294
         }
       ],
 
@@ -194,8 +194,8 @@ export default {
           break
 
         case '9:16':
-          this.width = 9 * unit + 'px'
-          this.height = 16 * unit + 'px'
+          this.width = 4.5 * unit + 'px'
+          this.height = 8 * unit + 'px'
           break
 
         case '3:4':
@@ -270,9 +270,9 @@ export default {
      * приоритет - у центральной зоны
      * */
     updateClipZone (clip, keepDelta = false) {
-			let matchedZone = -1
+      let matchedZone = -1
 
-			console.log(clip)
+      console.log('clip >>', clip.left, clip.top, clip.center.x, clip.center.y)
 
       if (
         clip.center.y > this.centerZone.top &&
@@ -292,6 +292,7 @@ export default {
 
             if (clip.center.x < zone.right && matchX == -1) {
               matchX = zoneX
+              console.log('matchX>>', clip.center.x, zone.right)
             }
 
             if (clip.center.y < zone.bottom && matchY == -1) {
@@ -310,32 +311,36 @@ export default {
         matchedZone = matchX + matchY * this.gridSize
       }
 
-      let finalZone =
-        matchedZone === 'center'
-          ? this.zones[this.centerZone.index]
-          : this.zones[matchedZone]
+      let finalZoneIndex =
+        matchedZone === 'center' ? this.centerZone.index : matchedZone
 
       if (keepDelta) {
-				let oldZone = this.zones[clip.zone]
+        let oldZone = this.zones[clip.zone]
 
-        this.setClipSize({
-          left: oldZone.center.x + clip.delta.x * this.cellWidth,
-          top: oldZone.center.y + clip.delta.y * this.cellHeight
+        this.setClipSize(clip, {
+          left: oldZone.center.x + clip.delta.x * this.cellWidth - (clip.width / 2),
+          top: oldZone.center.y + clip.delta.y * this.cellHeight- (clip.height / 2)
         })
       }
 
       //расстояние от центра клипа до центра зоны в процентах от размеров ячейки
       clip.delta = {
-        x: (clip.center.x - finalZone.center.x) / this.cellWidth,
-        y: (clip.center.y - finalZone.center.y) / this.cellHeight
+        x:
+          (clip.center.x - this.zones[finalZoneIndex].center.x) /
+          this.cellWidth,
+        y:
+          (clip.center.y - this.zones[finalZoneIndex].center.y) /
+          this.cellHeight
       }
 
       clip.zone = matchedZone
+
+      console.log('zones>>', clip.zone, matchedZone, finalZoneIndex)
     },
 
     /**
      * Получаем размеры клипа в px, когда он mounted
-     * Необхожимо, т.к. изначально размеры могут быть указаны в css в процентах
+     * Необходимо, т.к. изначально размеры могут быть указаны в css в процентах
      * */
     initClipSize (clip, evt) {
       clip.width = evt.width
@@ -355,13 +360,13 @@ export default {
       if (rect?.width) clip.width = rect.width
       if (rect?.height) clip.height = rect.height
 
-			clip.center = {
-        x: parseFloat(clip.left) + parseFloat(clip.width) / 2,
-        y: parseFloat(clip.top) + parseFloat(clip.height) / 2
-			}
+      clip.center = {
+        x: rect.left + clip.width / 2,
+        y: rect.top + clip.height / 2
+      }
 
-      clip.left = rect.left + 'px'
-      clip.top = rect.top + 'px'
+      clip.left = rect.left
+      clip.top = rect.top
     },
 
     /**
@@ -373,10 +378,15 @@ export default {
 
       //calculate cell sizes
 
-      const cellWidth =
-        this.$refs.canvas.getBoundingClientRect().width / this.gridSize
-      const cellHeight =
-        this.$refs.canvas.getBoundingClientRect().height / this.gridSize
+      const canvasWidth = parseFloat(
+        this.$refs.canvas.getBoundingClientRect().width
+      )
+      const canvasHeight = parseFloat(
+        this.$refs.canvas.getBoundingClientRect().height
+      )
+
+      const cellWidth = canvasWidth / this.gridSize
+      const cellHeight = canvasHeight / this.gridSize
 
       this.cellWidth = cellWidth
       this.cellHeight = cellHeight
@@ -393,16 +403,8 @@ export default {
           //calculate zone right and bottom points
           this.zones[zoneNumber] = { right: 0, bottom: 0 }
 
-          const left =
-            (parseFloat(this.$refs.canvas.getBoundingClientRect().width) /
-              this.gridSize) *
-            zoneX
-
-          const top =
-            (parseFloat(this.$refs.canvas.getBoundingClientRect().height) /
-              this.gridSize) *
-            zoneY
-
+          const left = (canvasWidth / this.gridSize) * zoneX
+          const top = (canvasHeight / this.gridSize) * zoneY
           const right = left + cellWidth
           const bottom = top + cellHeight
 
@@ -475,6 +477,7 @@ export default {
         parseFloat(this.$refs.canvas.getBoundingClientRect().height) / 2
       )
       this.initGridAndZones()
+
       this.clips.forEach(el => {
         this.updateClipZone(el, keepDelta)
       })
@@ -496,6 +499,8 @@ export default {
 .wrapper {
   width: 100vw;
   height: 100vh;
+	position: absolute;
+	overflow: auto;
 }
 
 .canvas {
