@@ -17,8 +17,8 @@
   >
     <slot></slot>
     <div class="center-point"></div>
-    <div class="clip-info">zone: {{ zone }}</div>
-    <div class="clip-info">
+    <div class="clip-info" v-show="showInfo">zone: {{ zone }}</div>
+    <div class="clip-info" v-show="showInfo">
       &Delta;x: {{ (dx * 100).toFixed(1) }}%
 			<br />
       &Delta;y: {{ (dy * 100).toFixed(1) }}%
@@ -39,7 +39,8 @@ export default {
     'top',
     'zIndex',
     'zone',
-    'dragPoint',
+		'dragPoint',
+		'showInfo',
     'dx',
     'dy'
   ],
@@ -105,7 +106,7 @@ export default {
   height: 6px;
   border-radius: 50%;
   position: absolute;
-  top: calc(50% - 6px);
-  left: calc(50% - 6px);
+  top: calc(50% - 3px);
+  left: calc(50% - 3px);
 }
 </style>

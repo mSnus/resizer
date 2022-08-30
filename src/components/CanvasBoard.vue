@@ -2,7 +2,7 @@
   <div class="wrapper">
     <div class="controls">
       <label>Ratio:</label>
-      <select id="selectCanvasSize" @change="selectCanvasSize">
+      <select id="uiSelectCanvasSize" @change="uiSelectCanvasSize">
         <option value="16:9" selected>16:9</option>
         <option value="1:1">1:1</option>
         <option value="4:3">4:3</option>
@@ -10,12 +10,12 @@
         <option value="3:4">3:4</option>
       </select>
       <label>Grid:</label>
-      <select id="selectGridSize" @change="selectGridSize">
+      <select id="uiSelectGridSize" @change="uiSelectGridSize">
         <option value="3x3" selected>3x3</option>
         <option value="5x5">5x5</option>
       </select>
       <label>Central zone:</label>
-      <select id="selectCenterFactor" @change="selectCenterFactor">
+      <select id="uiSelectCenterFactor" @change="uiSelectCenterFactor">
         <option value="0">0%</option>
         <option value="0.05">5%</option>
         <option value="0.1" selected>+10%</option>
@@ -23,6 +23,8 @@
         <option value="0.2">+20%</option>
         <option value="0.3">+30%</option>
       </select>
+			<label>Show grid & info:</label>
+			<input type="checkbox" id="uiToggleGrid" checked @click="uiToggleGrid"/>
     </div>
     <div
       class="canvas"
@@ -42,6 +44,7 @@
         :width="clip.width"
         :height="clip.height"
         :color="clip.color"
+				:showInfo="gridClass ===''"
         :radius="clip.radius"
         :left="clip.left + 'px'"
         :top="clip.top + 'px'"
@@ -66,10 +69,11 @@
         :width="gridline.width"
         :zIndex="10 + index"
         :key="index"
+				:class="gridClass"
       ></GridLine>
 
       <div
-        class="center-zone"
+        :class="'center-zone' + gridClass"
         :style="{
           width: centerZone.width + 'px',
           left: centerZone.left + 'px',
@@ -79,7 +83,7 @@
       ></div>
 
       <div
-        class="zone"
+				:class="'zone' + gridClass"
         v-for="(zone, index) in zones"
         :key="index + Math.random(0, 1000)"
         :style="{
@@ -134,7 +138,7 @@ export default {
           width: '120px',
           height: '120px',
           radius: '50%',
-          color: 'lime',
+          color: '#42cb00',
           left: 82,
           top: 294
         }
@@ -153,6 +157,7 @@ export default {
       cellWidth: 0,
       cellHeight: 0,
 
+			gridClass: '',
       zones: [],
       grid: []
     }
@@ -175,7 +180,7 @@ export default {
       }
     },
 
-    selectCanvasSize (evt) {
+    uiSelectCanvasSize (evt) {
       let newSize =
         evt.target.selectedIndex > -1
           ? evt.target.options[evt.target.selectedIndex].value
@@ -213,7 +218,7 @@ export default {
       setTimeout(this.initialSetup, 100, true)
     },
 
-    selectGridSize (evt) {
+    uiSelectGridSize (evt) {
       let newSize =
         evt.target.selectedIndex > -1
           ? evt.target.options[evt.target.selectedIndex].value
@@ -233,7 +238,7 @@ export default {
       setTimeout(this.initialSetup, 100)
     },
 
-    selectCenterFactor (evt) {
+    uiSelectCenterFactor (evt) {
       let newSize =
         evt.target.selectedIndex > -1
           ? evt.target.options[evt.target.selectedIndex].value
@@ -242,7 +247,11 @@ export default {
       this.centerZoneSnapFactor = parseFloat(newSize)
 
       setTimeout(this.initialSetup, 100)
-    },
+		},
+
+		uiToggleGrid() {
+			this.gridClass = (this.gridClass === '') ? ' hidden' : ''
+		},
 
     /**
      * Вызывается при окончании перетаскивания,
@@ -318,22 +327,26 @@ export default {
         let oldZone = this.zones[clip.zone]
 
         this.setClipSize(clip, {
-          left: oldZone.center.x + clip.delta.x * this.cellWidth - (clip.width / 2),
-          top: oldZone.center.y + clip.delta.y * this.cellHeight- (clip.height / 2)
+          left:
+            oldZone.center.x + clip.delta.x * this.cellWidth - clip.width / 2,
+          top:
+            oldZone.center.y + clip.delta.y * this.cellHeight - clip.height / 2
         })
+      } else {
+        //расстояние от центра клипа до центра зоны в процентах от размеров ячейки
+        clip.delta = {
+          x:
+            (clip.center.x - this.zones[finalZoneIndex].center.x) /
+            this.cellWidth,
+          y:
+            (clip.center.y - this.zones[finalZoneIndex].center.y) /
+            this.cellHeight
+				}
+
+				clip.zone = finalZoneIndex
       }
 
-      //расстояние от центра клипа до центра зоны в процентах от размеров ячейки
-      clip.delta = {
-        x:
-          (clip.center.x - this.zones[finalZoneIndex].center.x) /
-          this.cellWidth,
-        y:
-          (clip.center.y - this.zones[finalZoneIndex].center.y) /
-          this.cellHeight
-      }
 
-      clip.zone = matchedZone
 
       console.log('zones>>', clip.zone, matchedZone, finalZoneIndex)
     },
@@ -499,8 +512,8 @@ export default {
 .wrapper {
   width: 100vw;
   height: 100vh;
-	position: absolute;
-	overflow: auto;
+  position: absolute;
+  overflow: auto;
 }
 
 .canvas {
@@ -553,5 +566,10 @@ export default {
 .controls select {
   font-size: 1rem;
   margin: 0px 0.5rem;
+}
+
+.hidden {
+	opacity: 0;
+	transition: opacity 1s;
 }
 </style>
