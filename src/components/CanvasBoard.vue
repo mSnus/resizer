@@ -22,9 +22,11 @@
         <option value="0.15">+15%</option>
         <option value="0.2">+20%</option>
         <option value="0.3">+30%</option>
+        <option value="0.4">+40%</option>
+        <option value="0.5">+50%</option>
       </select>
-			<label>Show grid & info:</label>
-			<input type="checkbox" id="uiToggleGrid" checked @click="uiToggleGrid"/>
+      <label>Show grid & info:</label>
+      <input type="checkbox" id="uiToggleGrid" checked @click="uiToggleGrid" />
     </div>
     <div
       class="canvas"
@@ -41,10 +43,10 @@
         v-for="(clip, index) in clips"
         :id="clip.id"
         :key="clip.id"
-        :width="clip.width"
-        :height="clip.height"
+        :width="clip.width + 'px'"
+        :height="clip.height + 'px'"
         :color="clip.color"
-				:showInfo="gridClass ===''"
+        :showInfo="gridClass === ''"
         :radius="clip.radius"
         :left="clip.left + 'px'"
         :top="clip.top + 'px'"
@@ -55,7 +57,7 @@
         :dy="clip.delta?.y ?? 0"
         :zone="clip.zone"
         @drag-started="clipDragStarted(clip, $event)"
-        @init-clip-size="initClipSize(clip, $event)"
+        @update-clip-size="setClipSize(clip, $event)"
       >
       </VideoClip>
 
@@ -67,9 +69,9 @@
         :top="gridline.top"
         :height="gridline.height"
         :width="gridline.width"
-        :zIndex="10 + index"
+        :zIndex="1000 + index"
         :key="index"
-				:class="gridClass"
+        :class="gridClass"
       ></GridLine>
 
       <div
@@ -83,7 +85,7 @@
       ></div>
 
       <div
-				:class="'zone' + gridClass"
+        :class="'zone' + gridClass"
         v-for="(zone, index) in zones"
         :key="index + Math.random(0, 1000)"
         :style="{
@@ -117,8 +119,8 @@ export default {
       clips: [
         {
           id: 'clip1',
-          width: '400px',
-          height: '200px',
+          width: 400,
+          height: 200,
           color: '#262366',
           radius: '0',
           left: 48,
@@ -126,17 +128,17 @@ export default {
         },
         {
           id: 'clip2',
-          width: '300px',
-          height: '200px',
+          width: 200,
+          height: 300,
           color: '#ffcc00',
           radius: '0',
-          left: 480,
-          top: 360
+          left: 520,
+          top: 120
         },
         {
           id: 'clip3',
-          width: '120px',
-          height: '120px',
+          width: 220,
+          height: 220,
           radius: '50%',
           color: '#42cb00',
           left: 82,
@@ -157,7 +159,7 @@ export default {
       cellWidth: 0,
       cellHeight: 0,
 
-			gridClass: '',
+      gridClass: '',
       zones: [],
       grid: []
     }
@@ -247,11 +249,11 @@ export default {
       this.centerZoneSnapFactor = parseFloat(newSize)
 
       setTimeout(this.initialSetup, 100)
-		},
+    },
 
-		uiToggleGrid() {
-			this.gridClass = (this.gridClass === '') ? ' hidden' : ''
-		},
+    uiToggleGrid () {
+      this.gridClass = this.gridClass === '' ? ' hidden' : ''
+    },
 
     /**
      * Вызывается при окончании перетаскивания,
@@ -281,8 +283,6 @@ export default {
     updateClipZone (clip, keepDelta = false) {
       let matchedZone = -1
 
-      console.log('clip >>', clip.left, clip.top, clip.center.x, clip.center.y)
-
       if (
         clip.center.y > this.centerZone.top &&
         clip.center.y < this.centerZone.bottom &&
@@ -301,7 +301,6 @@ export default {
 
             if (clip.center.x < zone.right && matchX == -1) {
               matchX = zoneX
-              console.log('matchX>>', clip.center.x, zone.right)
             }
 
             if (clip.center.y < zone.bottom && matchY == -1) {
@@ -341,35 +340,18 @@ export default {
           y:
             (clip.center.y - this.zones[finalZoneIndex].center.y) /
             this.cellHeight
-				}
+        }
 
-				clip.zone = finalZoneIndex
+        clip.zone = finalZoneIndex
       }
-
-
-
-      console.log('zones>>', clip.zone, matchedZone, finalZoneIndex)
     },
 
     /**
-     * Получаем размеры клипа в px, когда он mounted
-     * Необходимо, т.к. изначально размеры могут быть указаны в css в процентах
+     * Устанавливаем размеры и положение клипа, координаты центра задаются автоматически по ним
+		 * left, top: inevitable
+		 * width, height: optional
      * */
-    initClipSize (clip, evt) {
-      clip.width = evt.width
-      clip.height = evt.height
-
-      this.setClipSize(clip, {
-        left:
-          evt.left - parseFloat(this.$refs.canvas.getBoundingClientRect().left),
-        top: evt.top - parseFloat(this.$refs.canvas.getBoundingClientRect().top)
-      })
-    },
-
-    /**
-     * Устанавливаем размеры клипа, координаты центра высчитываются автоматически
-     * */
-    setClipSize (clip, rect) {
+		setClipSize(clip, rect) {
       if (rect?.width) clip.width = rect.width
       if (rect?.height) clip.height = rect.height
 
@@ -379,7 +361,8 @@ export default {
       }
 
       clip.left = rect.left
-      clip.top = rect.top
+			clip.top = rect.top
+
     },
 
     /**
@@ -491,8 +474,10 @@ export default {
       )
       this.initGridAndZones()
 
-      this.clips.forEach(el => {
-        this.updateClipZone(el, keepDelta)
+			this.clips.forEach(clip => {
+				//чтобы рассчитать центры
+				this.setClipSize(clip, {left: clip.left, top: clip.top})
+        this.updateClipZone(clip, keepDelta)
       })
     }
   },
@@ -569,7 +554,7 @@ export default {
 }
 
 .hidden {
-	opacity: 0;
-	transition: opacity 1s;
+  opacity: 0;
+  transition: opacity 1s;
 }
 </style>
