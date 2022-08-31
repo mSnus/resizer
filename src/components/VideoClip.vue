@@ -32,6 +32,9 @@
 </template>
 
 <script>
+const RESIZE_MODE_FIT = 'fit'
+const RESIZE_MODE_FILL = 'fill'
+
 export default {
   name: 'VideoClip',
   props: [
@@ -77,58 +80,12 @@ export default {
       })
     },
 
-    setMode (mode) {
-      const parentRect = this.$refs.container.parentElement.getBoundingClientRect()
-      const width = parseFloat(this.width)
-      const height = parseFloat(this.height)
-      const parentToClipRatioW = parentRect.width / width
-      const parentToClipRatioH = parentRect.height / height
-
-      let rect = {}
-      if (mode === 'fit') {
-        if (width * parentToClipRatioH <= parentRect.width) {
-          rect = {
-            width: width * parentToClipRatioH,
-            height: height * parentToClipRatioH,
-            top: 0,
-            left: parseFloat(this.left)
-          }
-        } else {
-          rect = {
-            width: width * parentToClipRatioW,
-            height: height * parentToClipRatioW,
-            top: parseFloat(this.top),
-            left: 0
-          }
-        }
-      } else {
-        // mode === fill
-        if (width * parentToClipRatioH <= parentRect.width) {
-          rect = {
-            width: width * parentToClipRatioW,
-            height: height * parentToClipRatioW,
-            top: 0, //--need to center
-            left: 0
-          }
-        } else {
-          rect = {
-            width: width * parentToClipRatioH,
-            height: height * parentToClipRatioH,
-            top: 0,
-            left: 0 //--need to center
-          }
-        }
-      }
-
-      this.$emit('update-clip-size', rect)
-    },
-
     setModeFit () {
-      this.setMode('fit')
+      this.$emit('set-fit-mode', RESIZE_MODE_FIT)
     },
 
     setModeFill () {
-      this.setMode('fill')
+      this.$emit('set-fit-mode', RESIZE_MODE_FILL)
     },
 
     setModeReset () {

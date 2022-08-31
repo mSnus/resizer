@@ -1,7 +1,6 @@
 <template>
   <div class="wrapper">
     <div class="controls">
-
       <label for="uiSelectCanvasSize">Ratio:</label>
       <select id="uiSelectCanvasSize" @change="uiSelectCanvasSize">
         <option value="16:9" selected>16:9</option>
@@ -17,7 +16,7 @@
         <option value="5x5">5x5</option>
       </select>
 
-			<label for="uiSelectCenterFactor">Central zone:</label>
+      <label for="uiSelectCenterFactor">Central zone:</label>
       <select id="uiSelectCenterFactor" @change="uiSelectCenterFactor">
         <option value="0">0%</option>
         <option value="0.05">5%</option>
@@ -39,8 +38,8 @@
       @dragover.prevent
       @dragenter.prevent
       :style="{
-        width: width,
-        height: height
+        width: width + 'px',
+        height: height + 'px'
       }"
     >
       <VideoClip
@@ -62,6 +61,7 @@
         :zone="clip.zone"
         @drag-started="clipDragStarted(clip, $event)"
         @update-clip-size="setClipSize(clip, $event)"
+        @set-fit-mode="setFitFillMode(clip, $event)"
       >
       </VideoClip>
 
@@ -111,6 +111,13 @@ import GridLine from './GridLine.vue'
 
 const GRID_SIZE = 3
 
+const STICKY_TOLERANCE = 8
+const STICK_SIDE_WIDTH = 'w'
+const STICK_SIDE_HEIGHT = 'h'
+
+const RESIZE_MODE_FIT = 'fit'
+const RESIZE_MODE_FILL = 'fill'
+
 export default {
   name: 'CanvasBoard',
   components: {
@@ -124,7 +131,7 @@ export default {
         {
           id: 'clip1',
           width: 400,
-          height: 200,
+          height: 150,
           color: '#262366',
           radius: '0',
           left: 48,
@@ -155,11 +162,13 @@ export default {
         y: 0
       },
 
-      width: '800px',
-      height: '450px',
+      width: 800,
+      height: 450,
+
       gridSize: GRID_SIZE,
       centerZoneSnapFactor: 0.1,
       centerZone: {},
+
       cellWidth: 0,
       cellHeight: 0,
 
@@ -175,7 +184,7 @@ export default {
       const clip = this.clips.find(clip => clip.id == itemID)
 
       this.dargMoveClip(clip, evt)
-      this.updateClipZone(clip)
+      this.updateClipSticking(clip)
     },
 
     clipDragStarted (clip, evt) {
@@ -187,6 +196,11 @@ export default {
     },
 
     uiSelectCanvasSize (evt) {
+      this.clips.forEach(clip => {
+        this.checkAndSetStickSide(clip)
+        console.log('stickside>>', clip.id, clip.stickSide)
+      })
+
       let newSize =
         evt.target.selectedIndex > -1
           ? evt.target.options[evt.target.selectedIndex].value
@@ -195,29 +209,29 @@ export default {
 
       switch (newSize) {
         case '4:3':
-          this.width = 16 * unit + 'px'
-          this.height = 12 * unit + 'px'
+          this.width = 16 * unit
+          this.height = 12 * unit
           break
 
         case '1:1':
-          this.width = 12 * unit + 'px'
-          this.height = 12 * unit + 'px'
+          this.width = 12 * unit
+          this.height = 12 * unit
           break
 
         case '9:16':
-          this.width = 6 * unit + 'px'
-          this.height = 10.6 * unit + 'px'
+          this.width = 6 * unit
+          this.height = 10.6 * unit
           break
 
         case '3:4':
-          this.width = 9 * unit + 'px'
-          this.height = 12 * unit + 'px'
+          this.width = 9 * unit
+          this.height = 12 * unit
           break
 
         default:
         case '16:9':
-          this.width = 16 * unit + 'px'
-          this.height = 9 * unit + 'px'
+          this.width = 16 * unit
+          this.height = 9 * unit
           break
       }
 
@@ -284,7 +298,7 @@ export default {
      * Считает, в какую из зон попал клип
      * приоритет - у центральной зоны
      * */
-    updateClipZone (clip, keepPosition = false) {
+    updateClipSticking (clip, keepSticky = false) {
       let matchedZone = -1
 
       if (
@@ -293,7 +307,7 @@ export default {
         clip.center.x > this.centerZone.left &&
         clip.center.x < this.centerZone.right
       ) {
-        matchedZone = 'center'
+        matchedZone = this.centerZone.index
       } else {
         let matchX = -1
         let matchY = -1
@@ -323,39 +337,151 @@ export default {
         matchedZone = matchX + matchY * this.gridSize
       }
 
-      let finalZoneIndex =
-        matchedZone === 'center' ? this.centerZone.index : matchedZone
-
-      if (keepPosition) {
-        let oldZone = this.zones[clip.zone]
-
-        this.setClipSize(clip, {
-          left:
-            oldZone.center.x + clip.delta.x * this.cellWidth - clip.width / 2,
-          top:
-            oldZone.center.y + clip.delta.y * this.cellHeight - clip.height / 2
-        })
+      //если меняем пропорции канвы, то позиции сохраняются,
+      //если меняем сетку или центральную зону, надо пересчитывать
+      if (keepSticky) {
+        this.applyClipSticking(clip)
       } else {
         //расстояние от центра клипа до центра зоны в процентах от размеров ячейки
         clip.delta = {
           x:
-            (clip.center.x - this.zones[finalZoneIndex].center.x) /
-            this.cellWidth,
+            (clip.center.x - this.zones[matchedZone].center.x) / this.cellWidth,
           y:
-            (clip.center.y - this.zones[finalZoneIndex].center.y) /
-            this.cellHeight
+            (clip.center.y - this.zones[matchedZone].center.y) / this.cellHeight
         }
 
-        clip.zone = finalZoneIndex
+        clip.zone = matchedZone
+
+        this.checkAndSetStickSide(clip)
       }
     },
 
     /**
+     * Применяет прилипание - либо к границам канвы, либо к зоне, в которой был клип
+     * @param {*} clip
+     */
+    applyClipSticking (clip) {
+      let oldZone = this.zones[clip.zone]
+
+      const canvasRect = this.$refs.canvas.getBoundingClientRect()
+      const canvasToClipRatioW = canvasRect.width / clip.width
+      const canvasToClipRatioH = canvasRect.height / clip.height
+
+      switch (clip.stickSide) {
+        case STICK_SIDE_WIDTH:
+          this.setClipSize(clip, {
+            width: canvasRect.width,
+            height: clip.height * canvasToClipRatioW,
+            left: 0,
+            top:
+              oldZone.center.y +
+              clip.delta.y * this.cellHeight -
+              clip.height / 2
+          })
+          break
+        case STICK_SIDE_HEIGHT:
+          this.setClipSize(clip, {
+            width: clip.width * canvasToClipRatioH,
+            height: canvasRect.height,
+            left:
+              oldZone.center.x + clip.delta.x * this.cellWidth - clip.width / 2,
+            top: 0
+          })
+          break
+        default:
+          this.setClipSize(clip, {
+            left:
+              oldZone.center.x + clip.delta.x * this.cellWidth - clip.width / 2,
+            top:
+              oldZone.center.y +
+              clip.delta.y * this.cellHeight -
+              clip.height / 2
+          })
+          break
+      }
+    },
+
+    /**
+     * Проверяет, совпадает ли положение и размеры клипа с какой-то из сторон канвы
+     * и выставляет у клипа нужный флаг
+     */
+    checkAndSetStickSide (clip) {
+      let widthIsSticky =
+        Math.abs(this.width - clip.left - clip.width) < STICKY_TOLERANCE &&
+        Math.abs(clip.left) < STICKY_TOLERANCE
+
+      let heightIsSticky =
+        Math.abs(this.height - clip.top - clip.height) < STICKY_TOLERANCE &&
+        Math.abs(clip.top) < STICKY_TOLERANCE
+
+      if (widthIsSticky) {
+        clip.stickSide = STICK_SIDE_WIDTH
+      } else if (heightIsSticky) {
+        clip.stickSide = STICK_SIDE_HEIGHT
+      } else {
+        clip.stickSide = 'none'
+      }
+      console.log(clip.id, 'checkAndSetStickSide>>', clip.stickSide)
+    },
+
+    /**
+     * Растягивает клип в режиме заполнения всей канвы или подгонки по лучшей стороне
+     * @param {*} mode Режим fit или fill
+     */
+    setFitFillMode (clip, mode) {
+      const canvasRect = this.$refs.canvas.getBoundingClientRect()
+      const width = clip.width
+      const height = clip.height
+      const canvasToClipRatioW = canvasRect.width / width
+      const canvasToClipRatioH = canvasRect.height / height
+
+      let rect = {}
+      if (mode === RESIZE_MODE_FIT) {
+        if (width * canvasToClipRatioH <= canvasRect.width) {
+          rect = {
+            width: width * canvasToClipRatioH,
+            height: height * canvasToClipRatioH,
+            top: 0,
+            left: clip.left
+          }
+        } else {
+          rect = {
+            width: width * canvasToClipRatioW,
+            height: height * canvasToClipRatioW,
+            top: clip.top,
+            left: 0
+          }
+        }
+      } else if (mode === RESIZE_MODE_FILL) {
+        // mode === fill
+        if (width * canvasToClipRatioH <= canvasRect.width) {
+          rect = {
+            width: width * canvasToClipRatioW,
+            height: height * canvasToClipRatioW,
+            top: (canvasRect.height - height * canvasToClipRatioW) / 2,
+            left: (canvasRect.width - width * canvasToClipRatioW) / 2
+          }
+        } else {
+          rect = {
+            width: width * canvasToClipRatioH,
+            height: height * canvasToClipRatioH,
+            top: (canvasRect.height - height * canvasToClipRatioH) / 2,
+            left: (canvasRect.width - width * canvasToClipRatioH) / 2
+          }
+        }
+      } else {
+        throw new Error(`setFitFillMode: unknown fit mode: ${mode}`)
+      }
+
+      this.setClipSize(clip, rect)
+    },
+
+    /**
      * Устанавливаем размеры и положение клипа, координаты центра задаются автоматически по ним
-		 * left, top: inevitable
-		 * width, height: optional
+     * left, top: inevitable
+     * width, height: optional
      * */
-		setClipSize(clip, rect) {
+    setClipSize (clip, rect, keepSticky = false) {
       if (rect?.width) clip.width = rect.width
       if (rect?.height) clip.height = rect.height
 
@@ -365,8 +491,9 @@ export default {
       }
 
       clip.left = rect.left
-			clip.top = rect.top
+      clip.top = rect.top
 
+      this.updateClipSticking(clip, keepSticky)
     },
 
     /**
@@ -378,15 +505,8 @@ export default {
 
       //calculate cell sizes
 
-      const canvasWidth = parseFloat(
-        this.$refs.canvas.getBoundingClientRect().width
-      )
-      const canvasHeight = parseFloat(
-        this.$refs.canvas.getBoundingClientRect().height
-      )
-
-      const cellWidth = canvasWidth / this.gridSize
-      const cellHeight = canvasHeight / this.gridSize
+      const cellWidth = this.width / this.gridSize
+      const cellHeight = this.height / this.gridSize
 
       this.cellWidth = cellWidth
       this.cellHeight = cellHeight
@@ -403,8 +523,8 @@ export default {
           //calculate zone right and bottom points
           this.zones[zoneNumber] = { right: 0, bottom: 0 }
 
-          const left = (canvasWidth / this.gridSize) * zoneX
-          const top = (canvasHeight / this.gridSize) * zoneY
+          const left = (this.width / this.gridSize) * zoneX
+          const top = (this.height / this.gridSize) * zoneY
           const right = left + cellWidth
           const bottom = top + cellHeight
 
@@ -467,32 +587,28 @@ export default {
       this.centerZone.height = this.centerZone.bottom - this.centerZone.top
     },
 
-    initialSetup (keepPosition = false) {
-      console.log(`init... keepPosition: ${keepPosition}`)
+    initialSetup (keepSticky = false) {
+      console.log(`init...`)
 
-      this.center.x = parseInt(
-        parseFloat(this.$refs.canvas.getBoundingClientRect().width) / 2
-      )
-      this.center.y = parseInt(
-        parseFloat(this.$refs.canvas.getBoundingClientRect().height) / 2
-      )
+      this.center.x = this.width / 2
+      this.center.y = this.height / 2
+
       this.initGridAndZones()
 
-			this.clips.forEach(clip => {
-				//чтобы рассчитать центры
-				this.setClipSize(clip, {left: clip.left, top: clip.top})
-        this.updateClipZone(clip, keepPosition)
+      this.clips.forEach(clip => {
+        //чтобы рассчитать центры
+        this.setClipSize(clip, { left: clip.left, top: clip.top }, keepSticky)
       })
     }
   },
 
   mounted () {
     this.initialSetup()
-    window.addEventListener('resize', this.initialSetup)
+    // window.addEventListener('resize', this.initialSetup)
   },
 
   destroyed () {
-    window.removeEventListener('resize', this.initialSetup)
+    // window.removeEventListener('resize', this.initialSetup)
   }
 }
 </script>
