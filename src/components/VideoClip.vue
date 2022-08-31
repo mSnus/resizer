@@ -6,7 +6,7 @@
       backgroundColor: color ?? '#262344',
       width: width ?? '450px',
       height: height ?? '300px',
-			borderRadius: radius ?? '0',
+      borderRadius: radius ?? '0',
       left: left ?? 'calc(50% - ' + parseFloat(width ?? '450px') / 2 + 'px)',
       top: top ?? 'calc(50% - ' + parseFloat(height ?? '300px') / 2 + 'px)',
       opacity: 0.8,
@@ -16,11 +16,16 @@
     @dragstart="startDrag($event)"
   >
     <slot></slot>
+    <div class="controls">
+      <button @click="setModeFit">fit</button>
+      <button @click="setModeFill">fill</button>
+      <button @click="setModeReset">reset</button>
+    </div>
     <div class="center-point"></div>
     <div class="clip-info" v-show="showInfo">zone: {{ zone }}</div>
     <div class="clip-info" v-show="showInfo">
       &Delta;x: {{ (dx * 100).toFixed(1) }}%
-			<br />
+      <br />
       &Delta;y: {{ (dy * 100).toFixed(1) }}%
     </div>
   </div>
@@ -33,19 +38,24 @@ export default {
     'id',
     'width',
     'height',
-		'color',
-		'radius',
+    'color',
+    'radius',
     'left',
     'top',
     'zIndex',
     'zone',
-		'dragPoint',
-		'showInfo',
+    'dragPoint',
+    'showInfo',
     'dx',
     'dy'
   ],
   data: function () {
-    return {}
+    return {
+      oldWidth: 0,
+      oldHeight: 0,
+      oldTop: 0,
+      oldLeft: 0
+    }
   },
 
   methods: {
@@ -65,17 +75,79 @@ export default {
         x: insideClipX,
         y: insideClipY
       })
+    },
+
+    setMode (mode) {
+      const parentRect = this.$refs.container.parentElement.getBoundingClientRect()
+      const width = parseFloat(this.width)
+      const height = parseFloat(this.height)
+      const parentToClipRatioW = parentRect.width / width
+      const parentToClipRatioH = parentRect.height / height
+
+      let rect = {}
+      if (mode === 'fit') {
+        if (width * parentToClipRatioH <= parentRect.width) {
+          rect = {
+            width: width * parentToClipRatioH,
+            height: height * parentToClipRatioH,
+            top: 0,
+            left: parseFloat(this.left)
+          }
+        } else {
+          rect = {
+            width: width * parentToClipRatioW,
+            height: height * parentToClipRatioW,
+            top: parseFloat(this.top),
+            left: 0
+          }
+        }
+      } else {
+        // mode === fill
+        if (width * parentToClipRatioH <= parentRect.width) {
+          rect = {
+            width: width * parentToClipRatioW,
+            height: height * parentToClipRatioW,
+            top: 0, //--need to center
+            left: 0
+          }
+        } else {
+          rect = {
+            width: width * parentToClipRatioH,
+            height: height * parentToClipRatioH,
+            top: 0,
+            left: 0 //--need to center
+          }
+        }
+      }
+
+      this.$emit('update-clip-size', rect)
+    },
+
+    setModeFit () {
+      this.setMode('fit')
+    },
+
+    setModeFill () {
+      this.setMode('fill')
+    },
+
+    setModeReset () {
+      let rect = {
+        width: this.oldWidth,
+        height: this.oldHeight,
+        top: this.oldTop,
+        left: this.oldLeft
+      }
+
+      this.$emit('update-clip-size', rect)
     }
   },
 
   mounted () {
-    // console.log('clip mounted', this.$refs.container.getBoundingClientRect().left, this.$refs.container.getBoundingClientRect().width)
-    this.$emit('init-clip-size', {
-      width: this.$refs.container.getBoundingClientRect().width,
-      height: this.$refs.container.getBoundingClientRect().height,
-      top: this.$refs.container.getBoundingClientRect().top,
-      left: this.$refs.container.getBoundingClientRect().left
-    })
+    this.oldHeight = parseFloat(this.height)
+    this.oldWidth = parseFloat(this.width)
+    this.oldTop = parseFloat(this.top)
+    this.oldLeft = parseFloat(this.left)
   }
 }
 </script>
@@ -93,10 +165,14 @@ export default {
   justify-content: center;
   align-items: center;
   box-shadow: 2px 2px 10px #00000070;
+
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
 .clip-info {
   min-width: 100%;
+  text-shadow: 2px 1px 1px black;
 }
 
 .center-point {
@@ -108,5 +184,17 @@ export default {
   position: absolute;
   top: calc(50% - 3px);
   left: calc(50% - 3px);
+}
+
+.clip:nth-child(1) {
+  background-image: url('@/assets/img1.jpg');
+}
+
+.clip:nth-child(2) {
+  background-image: url('@/assets/img2.jpg');
+}
+
+.clip:nth-child(3) {
+  background-image: url('@/assets/img3.jpg');
 }
 </style>

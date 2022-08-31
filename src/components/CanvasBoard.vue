@@ -1,7 +1,8 @@
 <template>
   <div class="wrapper">
     <div class="controls">
-      <label>Ratio:</label>
+
+      <label for="uiSelectCanvasSize">Ratio:</label>
       <select id="uiSelectCanvasSize" @change="uiSelectCanvasSize">
         <option value="16:9" selected>16:9</option>
         <option value="1:1">1:1</option>
@@ -9,12 +10,14 @@
         <option value="9:16">9:16</option>
         <option value="3:4">3:4</option>
       </select>
-      <label>Grid:</label>
+
+      <label for="uiSelectGridSize">Grid:</label>
       <select id="uiSelectGridSize" @change="uiSelectGridSize">
         <option value="3x3" selected>3x3</option>
         <option value="5x5">5x5</option>
       </select>
-      <label>Central zone:</label>
+
+			<label for="uiSelectCenterFactor">Central zone:</label>
       <select id="uiSelectCenterFactor" @change="uiSelectCenterFactor">
         <option value="0">0%</option>
         <option value="0.05">5%</option>
@@ -25,7 +28,8 @@
         <option value="0.4">+40%</option>
         <option value="0.5">+50%</option>
       </select>
-      <label>Show grid & info:</label>
+
+      <label for="uiToggleGrid">Show grid & info:</label>
       <input type="checkbox" id="uiToggleGrid" checked @click="uiToggleGrid" />
     </div>
     <div
@@ -201,8 +205,8 @@ export default {
           break
 
         case '9:16':
-          this.width = 4.5 * unit + 'px'
-          this.height = 8 * unit + 'px'
+          this.width = 6 * unit + 'px'
+          this.height = 10.6 * unit + 'px'
           break
 
         case '3:4':
@@ -280,7 +284,7 @@ export default {
      * Считает, в какую из зон попал клип
      * приоритет - у центральной зоны
      * */
-    updateClipZone (clip, keepDelta = false) {
+    updateClipZone (clip, keepPosition = false) {
       let matchedZone = -1
 
       if (
@@ -322,7 +326,7 @@ export default {
       let finalZoneIndex =
         matchedZone === 'center' ? this.centerZone.index : matchedZone
 
-      if (keepDelta) {
+      if (keepPosition) {
         let oldZone = this.zones[clip.zone]
 
         this.setClipSize(clip, {
@@ -463,8 +467,8 @@ export default {
       this.centerZone.height = this.centerZone.bottom - this.centerZone.top
     },
 
-    initialSetup (keepDelta = false) {
-      console.log(`init... keepDelta: ${keepDelta}`)
+    initialSetup (keepPosition = false) {
+      console.log(`init... keepPosition: ${keepPosition}`)
 
       this.center.x = parseInt(
         parseFloat(this.$refs.canvas.getBoundingClientRect().width) / 2
@@ -477,7 +481,7 @@ export default {
 			this.clips.forEach(clip => {
 				//чтобы рассчитать центры
 				this.setClipSize(clip, {left: clip.left, top: clip.top})
-        this.updateClipZone(clip, keepDelta)
+        this.updateClipZone(clip, keepPosition)
       })
     }
   },
