@@ -198,7 +198,6 @@ export default {
     uiSelectCanvasSize (evt) {
       this.clips.forEach(clip => {
         this.checkAndSetStickSide(clip)
-        console.log('stickside>>', clip.id, clip.stickSide)
       })
 
       let newSize =
@@ -421,7 +420,6 @@ export default {
       } else {
         clip.stickSide = 'none'
       }
-      console.log(clip.id, 'checkAndSetStickSide>>', clip.stickSide)
     },
 
     /**
