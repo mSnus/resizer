@@ -27,6 +27,8 @@
       &Delta;x: {{ (dx * 100).toFixed(1) }}%
       <br />
       &Delta;y: {{ (dy * 100).toFixed(1) }}%
+      <br />
+      STICKY: {{ stickSide }}
     </div>
   </div>
 </template>
@@ -50,7 +52,8 @@ export default {
     'dragPoint',
     'showInfo',
     'dx',
-    'dy'
+    'dy',
+    'stickSide'
   ],
   data: function () {
     return {
@@ -118,7 +121,7 @@ export default {
   display: flex;
   flex-wrap: wrap;
   font-size: 1.3rem;
-  color: rgb(208, 236, 208);
+  color: #720ec6;
   justify-content: center;
   align-items: center;
   box-shadow: 2px 2px 10px #00000070;
@@ -129,7 +132,7 @@ export default {
 
 .clip-info {
   min-width: 100%;
-  text-shadow: 2px 1px 1px black;
+  text-shadow: 2px 1px 1px #ffffff;
 }
 
 .center-point {

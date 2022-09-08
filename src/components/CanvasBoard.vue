@@ -3,11 +3,12 @@
     <div class="controls">
       <label for="uiSelectCanvasSize">Ratio:</label>
       <select id="uiSelectCanvasSize" @change="uiSelectCanvasSize">
-        <option value="16:9" selected>16:9</option>
-        <option value="1:1">1:1</option>
-        <option value="4:3">4:3</option>
-        <option value="9:16">9:16</option>
-        <option value="3:4">3:4</option>
+        <option v-for="(screen, idx) in screens"
+        :key="idx"
+        :value="screen.name"
+        :selected="(screen.name === '16:9')">
+          {{screen.name}}
+        </option>
       </select>
 
       <label for="uiSelectGridSize">Grid:</label>
@@ -59,6 +60,7 @@
         :dx="clip.delta?.x ?? 0"
         :dy="clip.delta?.y ?? 0"
         :zone="clip.zone"
+        :stickSide="clip.stickSide ?? STICK_SIDE_DEFAULT"
         @drag-started="clipDragStarted(clip, $event)"
         @update-clip-size="setClipSize(clip, $event)"
         @set-fit-mode="setFitFillMode(clip, $event)"
@@ -105,18 +107,63 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
 import VideoClip from './VideoClip.vue'
 import GridLine from './GridLine.vue'
 
 const GRID_SIZE = 3
 
 const STICKY_TOLERANCE = 8
-const STICK_SIDE_WIDTH = 'w'
-const STICK_SIDE_HEIGHT = 'h'
+const STICK_SIDE_WIDTH = 'width'
+const STICK_SIDE_HEIGHT = 'height'
+const STICK_SIDE_LEFT_TOP = 'left+top'
+const STICK_SIDE_LEFT_BOTTOM = 'left+bottom'
+const STICK_SIDE_RIGHT_TOP = 'right+top'
+const STICK_SIDE_RIGHT_BOTTOM = 'right+bottom'
+const STICK_SIDE_CENTER = 'center'
+const STICK_SIDE_DEFAULT = 'zone'
 
 const RESIZE_MODE_FIT = 'fit'
 const RESIZE_MODE_FILL = 'fill'
+
+
+const screenSizes = [
+  {
+    name: '4:3',
+    width: 16,
+    height: 12
+  },
+
+  {
+    name: '1:1',
+    width: 12,
+    height: 12
+  },
+
+  {
+    name: '9:16',
+    width: 6,
+    height: 10.6
+  },
+
+  {
+    name: '3:4',
+    width: 9,
+    height: 12
+  },
+
+  {
+    name: '21:9',
+    width: 21,
+    height: 9
+  },
+
+  {
+    name: '16:9',
+    width: 16,
+    height: 9
+  }
+]
 
 export default {
   name: 'CanvasBoard',
@@ -156,6 +203,8 @@ export default {
           top: 294
         }
       ],
+
+      screens: screenSizes,
 
       center: {
         x: 0,
@@ -225,6 +274,11 @@ export default {
         case '3:4':
           this.width = 9 * unit
           this.height = 12 * unit
+          break
+
+        case '21:9':
+          this.width = 21 * unit
+          this.height = 9 * unit
           break
 
         default:
@@ -387,6 +441,36 @@ export default {
             top: 0
           })
           break
+        case STICK_SIDE_LEFT_TOP:
+          this.setClipSize(clip, {
+            left: 0,
+            top: 0
+          })
+          break
+        case STICK_SIDE_LEFT_BOTTOM:
+          this.setClipSize(clip, {
+            left: 0,
+            top: canvasRect.height - clip.height
+          })
+          break
+        case STICK_SIDE_RIGHT_TOP:
+          this.setClipSize(clip, {
+            left: canvasRect.width - clip.width,
+            top: 0
+          })
+          break
+        case STICK_SIDE_RIGHT_BOTTOM:
+          this.setClipSize(clip, {
+            left: canvasRect.width - clip.width,
+            top: canvasRect.height - clip.height
+          })
+          break
+        case STICK_SIDE_CENTER:
+          this.setClipSize(clip, {
+            left: canvasRect.width / 2  - clip.width / 2,
+            top: canvasRect.height / 2 - clip.height / 2
+          })
+        break
         default:
           this.setClipSize(clip, {
             left:
@@ -405,20 +489,34 @@ export default {
      * и выставляет у клипа нужный флаг
      */
     checkAndSetStickSide (clip) {
-      let widthIsSticky =
-        Math.abs(this.width - clip.left - clip.width) < STICKY_TOLERANCE &&
-        Math.abs(clip.left) < STICKY_TOLERANCE
+      let leftIsSticky = Math.abs(clip.left) < STICKY_TOLERANCE
+      let rightIsSticky = Math.abs(this.width - clip.left - clip.width) < STICKY_TOLERANCE
+      let topIsSticky = Math.abs(clip.top) < STICKY_TOLERANCE
+      let bottomIsSticky = Math.abs(this.height - clip.top - clip.height) < STICKY_TOLERANCE
 
-      let heightIsSticky =
-        Math.abs(this.height - clip.top - clip.height) < STICKY_TOLERANCE &&
-        Math.abs(clip.top) < STICKY_TOLERANCE
+      let widthIsSticky = leftIsSticky && rightIsSticky
+      let heightIsSticky = topIsSticky && bottomIsSticky
+
+      let centerIsSticky =
+        Math.abs(this.height / 2 - (clip.top + clip.height / 2)) < (STICKY_TOLERANCE * 4) &&
+        Math.abs(this.width / 2 - (clip.left + clip.width / 2)) < (STICKY_TOLERANCE * 4)
 
       if (widthIsSticky) {
         clip.stickSide = STICK_SIDE_WIDTH
       } else if (heightIsSticky) {
         clip.stickSide = STICK_SIDE_HEIGHT
+      } else if (leftIsSticky && topIsSticky) {
+        clip.stickSide = STICK_SIDE_LEFT_TOP
+      } else if (leftIsSticky && bottomIsSticky) {
+        clip.stickSide = STICK_SIDE_LEFT_BOTTOM
+      } else if (rightIsSticky && topIsSticky) {
+        clip.stickSide = STICK_SIDE_RIGHT_TOP
+      } else if (rightIsSticky && bottomIsSticky) {
+        clip.stickSide = STICK_SIDE_RIGHT_BOTTOM
+      } else if (centerIsSticky) {
+        clip.stickSide = STICK_SIDE_CENTER
       } else {
-        clip.stickSide = 'none'
+        clip.stickSide = STICK_SIDE_DEFAULT
       }
     },
 
@@ -476,8 +574,8 @@ export default {
 
     /**
      * Устанавливаем размеры и положение клипа, координаты центра задаются автоматически по ним
-     * left, top: inevitable
-     * width, height: optional
+     * rect.left, rect.top: inevitable
+     * rect.width, rect.height: optional
      * */
     setClipSize (clip, rect, keepSticky = false) {
       if (rect?.width) clip.width = rect.width
