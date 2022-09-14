@@ -10,106 +10,100 @@
       left: left ?? 'calc(50% - ' + parseFloat(width ?? '450px') / 2 + 'px)',
       top: top ?? 'calc(50% - ' + parseFloat(height ?? '300px') / 2 + 'px)',
       opacity: 0.8,
-      zIndex: zIndex
+      zIndex: zIndex,
     }"
     draggable
     @dragstart="startDrag($event)"
   >
     <slot></slot>
-    <div class="controls">
+    <div class="controls" v-show="showInfo">
       <button @click="setModeFit">fit</button>
       <button @click="setModeFill">fill</button>
       <button @click="setModeReset">reset</button>
     </div>
     <div class="center-point"></div>
-    <div class="clip-info" v-show="showInfo">zone: {{ zone }}</div>
+    <div class="clip-info" v-show="showInfo">STICKY: {{ stickSide }}</div>
     <div class="clip-info" v-show="showInfo">
       &Delta;x: {{ (dx * 100).toFixed(1) }}%
       <br />
       &Delta;y: {{ (dy * 100).toFixed(1) }}%
-      <br />
-      STICKY: {{ stickSide }}
     </div>
   </div>
 </template>
 
 <script>
-const RESIZE_MODE_FIT = 'fit'
-const RESIZE_MODE_FILL = 'fill'
+const RESIZE_MODE_FIT = "fit";
+const RESIZE_MODE_FILL = "fill";
 
 export default {
-  name: 'VideoClip',
+  name: "VideoClip",
   props: [
-    'id',
-    'width',
-    'height',
-    'color',
-    'radius',
-    'left',
-    'top',
-    'zIndex',
-    'zone',
-    'dragPoint',
-    'showInfo',
-    'dx',
-    'dy',
-    'stickSide'
+    "id",
+    "width",
+    "height",
+    "color",
+    "radius",
+    "left",
+    "top",
+    "zIndex",
+    "zone",
+    "dragPoint",
+    "showInfo",
+    "dx",
+    "dy",
+    "stickSide",
   ],
   data: function () {
     return {
       oldWidth: 0,
       oldHeight: 0,
       oldTop: 0,
-      oldLeft: 0
-    }
+      oldLeft: 0,
+    };
   },
 
   methods: {
-    startDrag (evt) {
-      evt.dataTransfer.dropEffect = 'move'
-      evt.dataTransfer.effectAllowed = 'move'
-      evt.dataTransfer.setData('itemID', this.id)
+    startDrag(evt) {
+      evt.dataTransfer.dropEffect = "move";
+      evt.dataTransfer.effectAllowed = "move";
+      evt.dataTransfer.setData("itemID", this.id);
 
-      const insideClipX = parseInt(
-        evt.clientX - this.$refs.container.getBoundingClientRect().left
-      )
-      const insideClipY = parseInt(
-        evt.clientY - this.$refs.container.getBoundingClientRect().top
-      )
+      const insideClipX = parseInt(evt.clientX - this.$refs.container.getBoundingClientRect().left);
+      const insideClipY = parseInt(evt.clientY - this.$refs.container.getBoundingClientRect().top);
 
-      this.$emit('drag-started', {
+      this.$emit("drag-started", {
         x: insideClipX,
-        y: insideClipY
-      })
+        y: insideClipY,
+      });
     },
 
-    setModeFit () {
-      this.$emit('set-fit-mode', RESIZE_MODE_FIT)
+    setModeFit() {
+      this.$emit("set-fit-mode", RESIZE_MODE_FIT);
     },
 
-    setModeFill () {
-      this.$emit('set-fit-mode', RESIZE_MODE_FILL)
+    setModeFill() {
+      this.$emit("set-fit-mode", RESIZE_MODE_FILL);
     },
 
-    setModeReset () {
+    setModeReset() {
       let rect = {
         width: this.oldWidth,
         height: this.oldHeight,
         top: this.oldTop,
-        left: this.oldLeft
-      }
+        left: this.oldLeft,
+      };
 
-      this.$emit('update-clip-size', rect)
-    }
+      this.$emit("update-clip-size", rect);
+    },
   },
 
-  mounted () {
-    this.oldHeight = parseFloat(this.height)
-    this.oldWidth = parseFloat(this.width)
-    this.oldTop = parseFloat(this.top)
-    this.oldLeft = parseFloat(this.left)
-  }
-}
+  mounted() {
+    this.oldHeight = parseFloat(this.height);
+    this.oldWidth = parseFloat(this.width);
+    this.oldTop = parseFloat(this.top);
+    this.oldLeft = parseFloat(this.left);
+  },
+};
 </script>
 
 <style scoped>
@@ -147,14 +141,17 @@ export default {
 }
 
 .clip:nth-child(1) {
-  background-image: url('@/assets/img1.jpg');
+  background-image: url("@/assets/lorem-ipsum.png");
+  background-size: contain;
+  background-position: center center;
+  box-shadow: none;
 }
 
 .clip:nth-child(2) {
-  background-image: url('@/assets/img2.jpg');
+  background-image: url("@/assets/img2.jpg");
 }
 
 .clip:nth-child(3) {
-  background-image: url('@/assets/img3.jpg');
+  background-image: url("@/assets/img3.jpg");
 }
 </style>
