@@ -117,7 +117,8 @@
 import VideoClip from "./VideoClip.vue";
 import GridLine from "./GridLine.vue";
 
-const GRID_SIZE = 5;
+const GRID_SIZE = 9;
+const CENTER_ZONE_SNAP_FACTOR = 0.3;
 
 const STICKY_TOLERANCE = 8;
 
@@ -194,7 +195,7 @@ export default {
         {
           id: "clip2",
           mode: CLIP_MODE_GRAPHICS,
-          width: 200,
+          width: 160,
           height: 300,
           color: "#ffcc00",
           radius: "0",
@@ -237,7 +238,7 @@ export default {
       height: 450,
 
       gridSize: GRID_SIZE,
-      centerZoneSnapFactor: 0.1,
+      centerZoneSnapFactor: CENTER_ZONE_SNAP_FACTOR,
       centerZone: {},
 
       cellWidth: 0,
@@ -443,8 +444,8 @@ export default {
       let newClipSize = {
         left: undefined,
         top: undefined,
-        width: undefined,
-        height: undefined,
+        width: clip.width,
+        height: clip.height,
       };
 
       if (widthIsSticky) {
@@ -645,6 +646,7 @@ export default {
       }
 
       this.setClipSize(clip, rect);
+      this.calculateStickSides(clip);
     },
 
     /**
