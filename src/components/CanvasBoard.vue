@@ -122,6 +122,9 @@ const STICKY_TOLERANCE = 8;
 const RESIZE_MODE_FIT = "fit";
 const RESIZE_MODE_FILL = "fill";
 
+const CLIP_MODE_TEXT = "text";
+const CLIP_MODE_GRAPHICS = "graphics";
+
 const screenSizes = [
   {
     name: "4:3",
@@ -178,7 +181,7 @@ export default {
       clips: [
         {
           id: "clip1",
-          mode: "text",
+          mode: CLIP_MODE_TEXT,
           width: 400,
           height: 150,
           color: "unset",
@@ -188,7 +191,7 @@ export default {
         },
         {
           id: "clip2",
-          mode: "graphics",
+          mode: CLIP_MODE_GRAPHICS,
           width: 200,
           height: 300,
           color: "#ffcc00",
@@ -198,13 +201,23 @@ export default {
         },
         {
           id: "clip3",
-          mode: "graphics",
+          mode: CLIP_MODE_GRAPHICS,
           width: 160,
           height: 180,
           radius: "5%",
           color: "#42cb00",
           left: 160,
           top: 180,
+        },
+        {
+          id: "clip4",
+          mode: CLIP_MODE_GRAPHICS,
+          width: 420,
+          height: 120,
+          radius: "0",
+          color: "#4200cb",
+          left: 60,
+          top: 320,
         },
       ],
 
@@ -228,6 +241,8 @@ export default {
       cellWidth: 0,
       cellHeight: 0,
 
+      savedClipSizes: [],
+
       gridClass: "",
       zones: [],
       grid: [],
@@ -240,7 +255,7 @@ export default {
       const clip = this.clips.find((clip) => clip.id == itemID);
 
       this.dargMoveClip(clip, evt);
-      this.calculateClipZone(clip);
+      this.calculateMatchedZone(clip);
       this.calculateStickSides(clip);
     },
 
@@ -314,6 +329,14 @@ export default {
       this.gridClass = this.gridClass === "" ? " hidden" : "";
     },
 
+    uiSaveClipSizes() {
+      this.savedClipSizes.splice(0, this.savedClipSizes.length);
+
+      this.clips.forEach((clip) => {
+        this.savedClipSizes.push({ left: clip.left, top: clip.top, width: clip.width, height: clip.height });
+      });
+    },
+
     /**
      * Вызывается при окончании перетаскивания,
      * чтобы установить координаты относительно
@@ -335,12 +358,19 @@ export default {
       });
     },
 
+    updateClipCenter(clip) {
+      clip.center = {
+        x: clip.left + clip.width / 2,
+        y: clip.top + clip.height / 2,
+      };
+    },
+
     /**
      * Считает, в какую из зон попал клип
      * приоритет - у центральной зоны
      * */
-    calculateClipZone(clip) {
-      console.warn("calculateClipZone>>");
+    calculateMatchedZone(clip) {
+      console.warn("calculateMatchedZone>>");
       let matchedZone = -1;
 
       if (
@@ -465,11 +495,32 @@ export default {
         newClipSize.top = oldZone.center.y + clip.delta.y * this.cellHeight - clip.height / 2;
       }
 
+      /**
+       * Fit text clips to canvas if they are out of canvas after resize
+       */
+      if (clip.mode === CLIP_MODE_TEXT) {
+        if (newClipSize.left < 0) {
+          newClipSize.left = STICKY_TOLERANCE;
+        }
+
+        if (newClipSize.top < 0) {
+          newClipSize.top = STICKY_TOLERANCE;
+        }
+
+        if (newClipSize.width > canvasRect.width) {
+          newClipSize.width = canvasRect.width - STICKY_TOLERANCE * 2;
+        }
+
+        if (newClipSize.height > canvasRect.height) {
+          newClipSize.height = canvasRect.height - STICKY_TOLERANCE * 2;
+        }
+      }
+
       this.setClipSize(clip, newClipSize);
     },
 
     /**
-     * Проверяет, совпадает ли положение и размеры клипа с какой-то из сторон канвы
+     * Проверяет, совпадает ли положение и размеры клипа с какой-то из сторон канвы или её центром
      * и выставляет у клипа нужный флаг
      */
     calculateStickSides(clip) {
@@ -701,9 +752,8 @@ export default {
     this.initGridAndZones();
 
     this.clips.forEach((clip) => {
-      //чтобы рассчитать центры
-      this.setClipSize(clip, { left: clip.left, top: clip.top });
-      this.calculateClipZone(clip);
+      this.updateClipCenter(clip);
+      this.calculateMatchedZone(clip);
       this.calculateStickSides(clip);
     });
   },

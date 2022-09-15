@@ -22,12 +22,7 @@
       <button @click="setModeReset">reset</button>
     </div>
     <div class="center-point"></div>
-    <div class="clip-info" v-show="showInfo">STICKY: {{ stickSide }}</div>
-    <div class="clip-info" v-show="showInfo">
-      &Delta;x: {{ (dx * 100).toFixed(1) }}%
-      <br />
-      &Delta;y: {{ (dy * 100).toFixed(1) }}%
-    </div>
+    <div class="clip-info" v-show="showInfo">{{ stickSide }}</div>
   </div>
 </template>
 
@@ -153,5 +148,9 @@ export default {
 
 .clip:nth-child(3) {
   background-image: url("@/assets/img3.jpg");
+}
+
+.clip:nth-child(4) {
+  background-image: url("@/assets/img1.jpg");
 }
 </style>
