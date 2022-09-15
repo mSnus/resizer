@@ -14,7 +14,9 @@
         </option>
       </select>
 
-      <label for="uiSelectGridSize">Grid:</label>
+      <button @click="uiUndoCanvasSize" v-show="savedGridSize > -1">undo</button>
+
+      <!--       <label for="uiSelectGridSize">Grid:</label>
       <select id="uiSelectGridSize" @change="uiSelectGridSize">
         <option value="3x3">3x3</option>
         <option value="5x5" selected>5x5</option>
@@ -30,7 +32,7 @@
         <option value="0.3">+30%</option>
         <option value="0.4">+40%</option>
         <option value="0.5">+50%</option>
-      </select>
+      </select> -->
 
       <label for="uiToggleGrid">Show grid & info:</label>
       <input type="checkbox" id="uiToggleGrid" checked @click="uiToggleGrid" />
@@ -242,6 +244,7 @@ export default {
       cellHeight: 0,
 
       savedClipSizes: [],
+      savedGridSize: -1,
 
       gridClass: "",
       zones: [],
@@ -278,7 +281,6 @@ export default {
 
       let oldScreen = this.screens.find((el) => el.name === this.currentScreen);
       let newScreen = this.screens.find((el) => el.name === newSize);
-      console.log(oldScreen, newScreen);
 
       this.width = newScreen.width * unit;
       this.height = newScreen.height * unit;
@@ -288,10 +290,12 @@ export default {
       setTimeout(() => {
         this.initGridAndZones();
 
+        this.uiSaveClipSizes();
+
         this.clips.forEach((clip) => {
           this.rescaleWithCanvas(clip, oldScreen.scale, newScreen.scale);
           this.applyClipSticking(clip);
-          this.calculateStickSides(clip);
+          // this.calculateStickSides(clip);
         });
       }, 100);
     },
@@ -337,6 +341,10 @@ export default {
       });
     },
 
+    uiUndoCanvasSize() {
+      this.uiSelectCanvasSize();
+    },
+
     /**
      * Вызывается при окончании перетаскивания,
      * чтобы установить координаты относительно
@@ -370,7 +378,6 @@ export default {
      * приоритет - у центральной зоны
      * */
     calculateMatchedZone(clip) {
-      console.warn("calculateMatchedZone>>");
       let matchedZone = -1;
 
       if (
@@ -424,7 +431,6 @@ export default {
      * @param {*} clip
      */
     applyClipSticking(clip) {
-      console.warn("applyClipSticking>>");
       let oldZone = this.zones[clip.zone];
 
       const canvasRect = this.$refs.canvas.getBoundingClientRect();
@@ -524,7 +530,6 @@ export default {
      * и выставляет у клипа нужный флаг
      */
     calculateStickSides(clip) {
-      console.warn("calculateStickSides>>");
       let leftIsSticky = Math.abs(clip.left) < STICKY_TOLERANCE;
       let rightIsSticky = Math.abs(this.width - clip.left - clip.width) < STICKY_TOLERANCE;
       let topIsSticky = Math.abs(clip.top) < STICKY_TOLERANCE;
@@ -577,7 +582,6 @@ export default {
     },
 
     rescaleWithCanvas(clip, oldScale, newScale) {
-      console.warn("rescaleWithCanvas>>");
       if (newScale !== oldScale) {
         let newWidth = clip.width * (1 / oldScale) * newScale;
         // clip.left = clip.left + clip.width / 2 - newWidth / 2;
@@ -649,7 +653,6 @@ export default {
      * rect.width, rect.height: optional
      * */
     setClipSize(clip, rect) {
-      console.warn("setClipSize>>");
       if (rect?.width && rect?.width > 0) clip.width = rect.width;
       if (rect?.height && rect?.height > 0) clip.height = rect.height;
 
@@ -775,7 +778,7 @@ export default {
   overflow: hidden;
   background: rgb(223, 222, 236);
   background: linear-gradient(
-    90deg,
+    73deg,
     rgba(223, 222, 236, 1) 0%,
     rgba(227, 232, 238, 1) 35%,
     rgba(197, 232, 238, 1) 100%
@@ -785,8 +788,8 @@ export default {
 .center-point {
   background-color: #ff00d9;
   opacity: 0.5;
-  width: 12px;
-  height: 12px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   position: relative;
   top: calc(50% - 6px);
@@ -796,7 +799,7 @@ export default {
 .center-zone {
   border: solid 1px #ff000050;
   background-color: #ff000020;
-  opacity: 0.6;
+  opacity: 0.5;
   position: absolute;
 }
 
